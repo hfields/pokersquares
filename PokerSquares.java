@@ -113,10 +113,10 @@ public class PokerSquares {
 				long startTime = System.currentTimeMillis();
 				int[] play = player.getPlay(card, millisRemaining);
 				millisRemaining -= System.currentTimeMillis() - startTime;
-				if (millisRemaining < 0) { // times out
-					System.err.println("Player Out of Time");
-					return minPoints;
-				}
+//				if (millisRemaining < 0) { // times out
+//					System.err.println("Player Out of Time");
+//					return minPoints;
+//				}
 				if (play.length != 2 || play[0] < 0 || play[0] >= SIZE || play[1] < 0 || play[1] >= SIZE || grid[play[0]][play[1]] != null) { // illegal play
 					System.err.printf("Illegal play: %s\n", Arrays.toString(play));
 					return minPoints;

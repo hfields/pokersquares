@@ -14,7 +14,6 @@ import java.util.Random;
  * Author: Todd W. Neller
  */
 public class GreedyMCPlayer implements PokerSquaresPlayer {
-	
 	private final int SIZE = 5; // number of rows/columns in square grid
 	private final int NUM_POS = SIZE * SIZE; // number of positions in square grid
 	private final int NUM_CARDS = Card.NUM_CARDS; // number of cards in deck
