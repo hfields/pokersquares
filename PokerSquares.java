@@ -264,7 +264,7 @@ public class PokerSquares {
 				int[] scores = new PokerSquares(player, system).playSequence(gamesPerSystem, startSeed, false);
 				for (int score : scores)
 					totalScores[i] += score;
-				System.out.printf("Player \"%s\" total score: %d\n", player.getName(), totalScores[i]);
+				System.out.printf("Player \"%s\" Average Score: %d\n", player.getName(), totalScores[i]/gamesPerSystem);
 			}
 			int maxTotal = Integer.MIN_VALUE;
 			int minTotal = Integer.MAX_VALUE;
@@ -292,6 +292,7 @@ public class PokerSquares {
 
 		return tournamentScores;
 	}
+	
 
 	/**
 	 * Set the seed of the game pseudorandom number generator.
@@ -307,28 +308,16 @@ public class PokerSquares {
 	 * @param args (not used)
 	 */
 	public static void main(String[] args) {
-		// Demonstration of single game play (30 seconds)
-		System.out.println("Single game demo:");
-		PokerSquaresPointSystem.setSeed(0L);
-		PokerSquaresPointSystem system = PokerSquaresPointSystem.getAmeritishPointSystem();
-		System.out.println(system);
-		new PokerSquares(new GreedyMCPlayer(2), system).play();
-
-		// Demonstration of batch game play (30 seconds per game)
-		System.out.println("\n\nBatch game demo:");
-		System.out.println(system);
-		new PokerSquares(new GreedyMCPlayer(2), system).playSequence(3, 0, false);
-
-		// Demonstration of tournament evaluation (3 players, 2 point systems, 100 x 30s games for each of the 3*2=6 player-system pairs) 
+		// Demonstration of tournament evaluation  
 		System.out.println("\n\nTournament evaluation demo:");
 		ArrayList<PokerSquaresPlayer> players = new ArrayList<PokerSquaresPlayer>();
 		players.add(new RandomPlayer());
 		players.add(new GreedyMCPlayer(0));
 		players.add(new GreedyMCPlayer(2));
+		players.add(new ExpectimaxPlayer(0));
 		ArrayList<PokerSquaresPointSystem> systems = new ArrayList<PokerSquaresPointSystem>();
 		PokerSquaresPointSystem.setSeed(0L);
-		systems.add(system);
-		systems.add(PokerSquaresPointSystem.getRandomPointSystem());
-		PokerSquares.playTournament(players, systems, 100, 0L); // use fewer games per system for faster testing
+		systems.add(PokerSquaresPointSystem.getBritishPointSystem());
+		PokerSquares.playTournament(players, systems, 25, 0L); // use fewer games per system for faster testing
 	}
 }
