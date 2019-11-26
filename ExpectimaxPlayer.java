@@ -97,7 +97,7 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			double maxExpectimax = Double.NEGATIVE_INFINITY;
 			
 			for (int i = 0; i < remainingPlays; i++) { // for each legal play position
-				int play = legalPlayList[i];		
+				int play = legalPlayList[i];
 				double expectimax = heuristicExpectimax(card, play / SIZE, play % SIZE, this.depthLimit);  // find expectimax value of current play
 				
 				// Update max expectimax value/best plays list, if necessary
@@ -111,6 +111,10 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 				}
 		
 			}
+			
+			System.out.println(maxExpectimax);
+			System.out.println(bestPlays);
+			
 			int bestPlay = bestPlays.get(random.nextInt(bestPlays.size())); // choose a best play (breaking ties randomly)
 			// update our list of plays, recording the chosen play in its sequential position; all onward from numPlays are empty positions
 			int bestPlayIndex = numPlays;
@@ -138,10 +142,107 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 		int[] handScores = system.getHandScores(grid);
 		
 		for (int i = 0; i < 2 * SIZE; i++) {
-			eval += handScores[i];
+			int handScore = handScores[i];
+			
+			// If a hand is already made, it contributes its score to the heuristic val
+			if (handScore > 0) {
+				eval += handScores[i];
+			}
+			
+			// Otherwise, evaluate potential "goodness" of yet to be made hands
+			else {
+				// Check rows
+				if (i < 5) {	
+					eval += rowEval(i);
+				}
+				
+				// Check columns
+				else {
+					eval += 0;
+					//eval += colEval(i-5);
+				}
+			}
 		}
 		
 		return eval;
+	}
+	
+	private double rowEval(int row) {
+		int[] scores = system.getScoreTable();
+		int flushScore = scores[PokerHand.FLUSH.id];
+		
+		// Initialize variables to check for flush draws
+		int currentSuit = -1; //-1 indicates no suit set yet, -2 indicates missed flush draw
+		int suitCount = 0;
+		double score = 0;
+		
+		for (int col = 0; col < SIZE; col++) {
+			Card card = grid[row][col];
+			
+			// If card position isn't empty
+			if (card != null) {
+				// If flush draw is still possible, update it
+				if (currentSuit != -2) {
+					// Update flush draw if this is the first card in row or it matches the last card's suit
+					if (card.getSuit() == currentSuit || currentSuit == -1) {
+						suitCount += 1;
+						currentSuit = card.getSuit();
+					}
+					
+					// If suit does not match, flush draw is no longer possible
+					else {
+						suitCount = 0;
+						currentSuit = -2;
+					}
+				}
+			}
+		}
+		
+		// If we have more than one card of the same suit, add appropriate
+		// fraction of full flush score
+		if (suitCount > 1) {
+			score = flushScore * ((float)suitCount / SIZE);
+		}
+		
+		// If we have one card of the same suit, set to half of appropriate
+		// fraction of full flush score. This is to encourage agent not to
+		// ruin flush draws and continually stack up same-suit cards on the
+		// same row
+		else if (suitCount == 1) {
+			score = flushScore * ((float)suitCount / SIZE / 2);
+		}
+		
+//		System.out.println(score);
+		
+		return score;
+	}
+	
+	private double colEval(int col) {
+		int[] scores = system.getScoreTable();
+		int pairScore = scores[PokerHand.ONE_PAIR.id];
+		int twoPairScore = scores[PokerHand.TWO_PAIR.id];
+		int threeofaKindScore = scores[PokerHand.THREE_OF_A_KIND.id];
+		int fourofaKindScore = scores[PokerHand.FOUR_OF_A_KIND.id];
+		
+		// Initialize array of rank counts
+		int[] rankCounts = new int[Card.NUM_RANKS];
+		
+		double score = 0;
+		
+		// Count up ranks in given column
+		for (int row = 0; row < SIZE; row++) {
+			Card card = grid[row][col];
+						
+			// If card position isn't empty
+			if (card != null) {
+				rankCounts[card.getRank()]++;
+			}
+			
+		}
+		
+		// Find 
+		
+		return score;
 	}
 	
 	/**
@@ -159,6 +260,7 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 		
 		// Temporarily make the play indicated by card, row, and col
 		makePlay(card, row, col);
+		
 		
 		// If we are at the max depth of recursion, find value with heuristic evaluation function
 		if (depthLimit == 0) {
@@ -182,11 +284,12 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			}
 			
 			// copy the play positions (row-major indices) that are empty
-			System.arraycopy(plays, numPlays, legalPlayList, 0, remainingPlays);
+			int[] legalPlays = new int[NUM_POS];
+			System.arraycopy(plays, numPlays, legalPlays, 0, remainingPlays);
 			
 			for (int i = 0; i < remainingPlays; i++) {
 				double newExpectimax = 0;
-				int newPlay = legalPlayList[i];
+				int newPlay = legalPlays[i];
 				int newRow = newPlay / 5;
 				int newCol = newPlay % 5;
 				
