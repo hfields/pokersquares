@@ -20,7 +20,9 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	private int numPlays = 0; // number of Cards played into the grid so far
 	private int recursions = 0; // debugging variable for counting number of recursive calls of expectimax
 	private PokerSquaresPointSystem system; // point system
-	private int depthLimit = 2; // default depth limit for expectimax search
+	private double recursionLimit = 1000000; // rough limit for number of calls that should be made to expectimax to find a single move.
+										  // enforces a changing maximum depth as the game progresses
+	//private int depthLimit = 2; // default depth limit for expectimax search
 	private Card[][] grid = new Card[SIZE][SIZE]; // grid with Card objects or null (for empty positions)
 	private Card[] simDeck = Card.getAllCards(); // a list of all Cards. As we learn the index of cards in the play deck,
 	                                             // we swap each dealt card to its correct index.  Thus, from index numPlays 
@@ -29,18 +31,18 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	
 	/**
 	 * Create an expectimax player that performs depth-limited heuristic expectimax
-	 * search to a depth of 3.
+	 * search with a rough recursion limit of 1000000 expectimax calls.
 	 */
 	public ExpectimaxPlayer() {
 	}
 	
 	/**
 	 * Create an expectimax player that performs depth-limited heuristic expectimax
-	 * search to a given depth limit.
-	 * @param depthLimit depth limit for expectimax search
+	 * search with depth determined by the given recursion limit.
+	 * @param recursionLimit recursion limit to inform depth limit of expectimax search
 	 */
-	public ExpectimaxPlayer(int depthLimit) {
-		this.depthLimit = depthLimit;
+	public ExpectimaxPlayer(int recursionLimit) {
+		this.recursionLimit = recursionLimit;
 	}
 	
 	/* (non-Javadoc)
@@ -96,9 +98,39 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			ArrayList<Integer> bestPlays = new ArrayList<Integer>(); // all plays yielding the maximum average score 
 			double maxExpectimax = Double.NEGATIVE_INFINITY;
 			
+			// Compute a rough estimate of recursions needed to calculate expectimax values for this move
+			// Use this to compute depth limit for expectimax
+			double recursionEstimate = remainingPlays;
+			int depthLimit = 0;
+			for (int depth = 0; depth < remainingPlays; depth++) {
+				System.out.println(recursionEstimate);
+				int remPlays = remainingPlays - (depth + 1);
+				int remCards = NUM_CARDS - (NUM_POS - remPlays);
+				recursionEstimate = recursionEstimate + recursionEstimate * remPlays * remCards;
+				
+				// Set depthLimit and break if we exceed recursion limit
+				if (recursionEstimate > this.recursionLimit) {
+					depthLimit = depth;
+					break;
+				}
+				
+				// Or set depthLimit to max depth if we reach the end
+				else if (depth == remainingPlays - 1) {
+					depthLimit = depth;
+					break;
+				}
+			}
+						
+			System.out.print("Depth limit at move ");
+			System.out.print(numPlays + 1);
+			System.out.print(": ");
+			System.out.println(depthLimit);
+			System.out.print("Number of recursions for 1 deeper depth limit: ");
+			System.out.println(recursionEstimate);
+			
 			for (int i = 0; i < remainingPlays; i++) { // for each legal play position
 				int play = legalPlayList[i];
-				double expectimax = heuristicExpectimax(card, play / SIZE, play % SIZE, this.depthLimit);  // find expectimax value of current play
+				double expectimax = heuristicExpectimax(card, play / SIZE, play % SIZE, depthLimit);  // find expectimax value of current play
 				
 				// Update max expectimax value/best plays list, if necessary
 				if (expectimax >= maxExpectimax) {
@@ -158,8 +190,7 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 				
 				// Check columns
 				else {
-					eval += 0;
-					//eval += colEval(i-5);
+					eval += colEval(i-5);
 				}
 			}
 		}
@@ -212,35 +243,11 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			score = flushScore * ((float)suitCount / SIZE / 2);
 		}
 		
-//		System.out.println(score);
-		
 		return score;
 	}
 	
 	private double colEval(int col) {
-		int[] scores = system.getScoreTable();
-		int pairScore = scores[PokerHand.ONE_PAIR.id];
-		int twoPairScore = scores[PokerHand.TWO_PAIR.id];
-		int threeofaKindScore = scores[PokerHand.THREE_OF_A_KIND.id];
-		int fourofaKindScore = scores[PokerHand.FOUR_OF_A_KIND.id];
-		
-		// Initialize array of rank counts
-		int[] rankCounts = new int[Card.NUM_RANKS];
-		
 		double score = 0;
-		
-		// Count up ranks in given column
-		for (int row = 0; row < SIZE; row++) {
-			Card card = grid[row][col];
-						
-			// If card position isn't empty
-			if (card != null) {
-				rankCounts[card.getRank()]++;
-			}
-			
-		}
-		
-		// Find 
 		
 		return score;
 	}

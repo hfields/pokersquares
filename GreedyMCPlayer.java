@@ -224,7 +224,7 @@ public class GreedyMCPlayer implements PokerSquaresPlayer {
 	 * @param args (not used)
 	 */
 	public static void main(String[] args) {
-		PokerSquaresPointSystem system = PokerSquaresPointSystem.getAmeritishPointSystem();
+		PokerSquaresPointSystem system = PokerSquaresPointSystem.getBritishPointSystem();
 		System.out.println(system);
 		new PokerSquares(new GreedyMCPlayer(2), system).play(); // play a single game
 	}
