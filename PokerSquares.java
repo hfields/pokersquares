@@ -314,8 +314,8 @@ public class PokerSquares {
 //		players.add(new RandomPlayer());
 //		players.add(new GreedyMCPlayer(0));
 //		players.add(new GreedyMCPlayer(2));
-		players.add(new ExpectimaxPlayer(1000000));
-		players.add(new ExpectimaxPlayer(30000000));
+		players.add(new ExpectimaxPlayer(1000000, false));
+//		players.add(new ExpectimaxPlayer(30000000, false));
 		ArrayList<PokerSquaresPointSystem> systems = new ArrayList<PokerSquaresPointSystem>();
 		PokerSquaresPointSystem.setSeed(0L);
 		systems.add(PokerSquaresPointSystem.getBritishPointSystem());

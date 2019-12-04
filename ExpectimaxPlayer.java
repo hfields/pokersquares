@@ -13,6 +13,7 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	private final int SIZE = 5; // number of rows/columns in square grid
 	private final int NUM_POS = SIZE * SIZE; // number of positions in square grid
 	private final int NUM_CARDS = Card.NUM_CARDS; // number of cards in deck
+	private boolean debug = true; // boolean determining whether or not debug statements will print
 	private Random random = new Random(); // pseudorandom number generator for breaking ties when choosing moves
 	private int[] plays = new int[NUM_POS]; // positions of plays so far (index 0 through numPlays - 1) recorded as integers using row-major indices.
 	// row-major indices: play (r, c) is recorded as a single integer r * SIZE + c (See http://en.wikipedia.org/wiki/Row-major_order)
@@ -22,7 +23,6 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	private PokerSquaresPointSystem system; // point system
 	private double recursionLimit = 1000000; // rough limit for number of calls that should be made to expectimax to find a single move.
 										  // enforces a changing maximum depth as the game progresses
-	//private int depthLimit = 2; // default depth limit for expectimax search
 	private Card[][] grid = new Card[SIZE][SIZE]; // grid with Card objects or null (for empty positions)
 	private Card[] simDeck = Card.getAllCards(); // a list of all Cards. As we learn the index of cards in the play deck,
 	                                             // we swap each dealt card to its correct index.  Thus, from index numPlays 
@@ -41,8 +41,9 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	 * search with depth determined by the given recursion limit.
 	 * @param recursionLimit recursion limit to inform depth limit of expectimax search
 	 */
-	public ExpectimaxPlayer(int recursionLimit) {
+	public ExpectimaxPlayer(int recursionLimit, boolean debug) {
 		this.recursionLimit = recursionLimit;
+		this.debug = debug;
 	}
 	
 	/* (non-Javadoc)
@@ -103,7 +104,11 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			double recursionEstimate = remainingPlays;
 			int depthLimit = 0;
 			for (int depth = 0; depth < remainingPlays; depth++) {
-				System.out.println(recursionEstimate);
+				
+				if (debug) {
+					System.out.println(recursionEstimate);
+				}
+				
 				int remPlays = remainingPlays - (depth + 1);
 				int remCards = NUM_CARDS - (NUM_POS - remPlays);
 				recursionEstimate = recursionEstimate + recursionEstimate * remPlays * remCards;
@@ -120,13 +125,15 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 					break;
 				}
 			}
-						
-			System.out.print("Depth limit at move ");
-			System.out.print(numPlays + 1);
-			System.out.print(": ");
-			System.out.println(depthLimit);
-			System.out.print("Number of recursions for 1 deeper depth limit: ");
-			System.out.println(recursionEstimate);
+			
+			if (debug) {
+				System.out.print("Depth limit at move ");
+				System.out.print(numPlays + 1);
+				System.out.print(": ");
+				System.out.println(depthLimit);
+				System.out.print("Number of recursions for 1 deeper depth limit: ");
+				System.out.println(recursionEstimate);
+			}
 			
 			for (int i = 0; i < remainingPlays; i++) { // for each legal play position
 				int play = legalPlayList[i];
@@ -144,8 +151,10 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 		
 			}
 			
-			System.out.println(maxExpectimax);
-			System.out.println(bestPlays);
+			if (debug) {
+				System.out.println(maxExpectimax);
+				System.out.println(bestPlays);
+			}
 			
 			int bestPlay = bestPlays.get(random.nextInt(bestPlays.size())); // choose a best play (breaking ties randomly)
 			// update our list of plays, recording the chosen play in its sequential position; all onward from numPlays are empty positions
@@ -156,9 +165,11 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			plays[numPlays] = bestPlay;
 		}
 		
-		// Print number of calls to expectimax required for the move
-		System.out.print("Calls to expectimax: ");
-		System.out.println(recursions);
+		if (debug) {
+			// Print number of calls to expectimax required for the move
+			System.out.print("Calls to expectimax: ");
+			System.out.println(recursions);
+		}
 		
 		int[] playPos = {plays[numPlays] / SIZE, plays[numPlays] % SIZE}; // decode it into row and column
 		makePlay(card, playPos[0], playPos[1]); // make the chosen play (not undoing this time)
@@ -264,6 +275,33 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			if (card != null) {
 				int rank = card.getRank();
 				
+				// If there is only an ace in the straight draw, allow it to count as
+				// high or low, depending on the new card
+				if (maxRank == 0 && minRank == 0) {
+					// If card is 10 or higher, count ace as high
+					if (rank >= 9) {
+						maxRank = 13;
+						minRank = 13;
+					}
+					
+					// If card is 5 or lower, count ace as low
+					else if (rank <= 5) {
+						maxRank = 0;
+						minRank = 0;
+					}
+					
+					// Otherwise, straight draw is missed
+					else {
+						straightDraw = 0;
+						break;
+					}
+				}
+				
+				// If there is at least a 10 in the straight draw, treat ace as high
+				if (maxRank >= 9 && rank == 0) {
+					rank = 13;
+				}
+				
 				// Update straight draw if this is the first card in col or it contributes to the straight
 				if (straightDraw == 0 || (rank >= lowRank && rank <= highRank && !usedRanks.contains(rank))) {
 					straightDraw += 1;
@@ -278,12 +316,22 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 					}
 					
 					// Calculate new bounds for straight
-					lowRank = minRank - (SIZE - (maxRank - minRank + 1));
-					highRank = maxRank + (SIZE - (maxRank - minRank + 1));
+					lowRank = minRank - (SIZE - 1 - (maxRank - minRank));
+					highRank = maxRank + (SIZE - 1 - (maxRank - minRank));
+					
+					// Ensure that bounds do not exceed limits
+					if (lowRank < 0) {
+						lowRank = 0;
+					}
+					
+					if (highRank > 13) {
+						highRank = 13;
+					}
 				}
 				
 				// If straight draw is missed, break immediately
 				else {
+					straightDraw = 0;
 					break;
 				}
 			}
