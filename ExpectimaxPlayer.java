@@ -203,7 +203,7 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 		int flushScore = scores[PokerHand.FLUSH.id];
 		
 		// Initialize variables to check for flush draws
-		int currentSuit = -1; //-1 indicates no suit set yet, -2 indicates missed flush draw
+		int currentSuit = -1; //-1 indicates no suit set yet
 		int suitCount = 0;
 		double score = 0;
 		
@@ -212,19 +212,16 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			
 			// If card position isn't empty
 			if (card != null) {
-				// If flush draw is still possible, update it
-				if (currentSuit != -2) {
-					// Update flush draw if this is the first card in row or it matches the last card's suit
-					if (card.getSuit() == currentSuit || currentSuit == -1) {
-						suitCount += 1;
-						currentSuit = card.getSuit();
-					}
-					
-					// If suit does not match, flush draw is no longer possible
-					else {
-						suitCount = 0;
-						currentSuit = -2;
-					}
+				// Update flush draw if this is the first card in row or it matches the last card's suit
+				if (card.getSuit() == currentSuit || currentSuit == -1) {
+					suitCount += 1;
+					currentSuit = card.getSuit();
+				}
+				
+				// If suit does not match, flush draw is no longer possible
+				else {
+					suitCount = 0;
+					break;
 				}
 			}
 		}
@@ -247,7 +244,64 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	}
 	
 	private double colEval(int col) {
+		int[] scores = system.getScoreTable();
+		int straightScore = scores[PokerHand.STRAIGHT.id];
+		
+		// Initialize variables to check for straight draws
+		int cardCount = 0;
+		int straightDraw = 0;
+		int maxRank = -1;
+		int minRank = 13;
+		int lowRank = 0;
+		int highRank = 12;
+		ArrayList<Integer> usedRanks = new ArrayList<Integer>();
 		double score = 0;
+		
+		for (int row = 0; row < SIZE; row++) {
+			Card card = grid[row][col];
+			
+			// If card position isn't empty
+			if (card != null) {
+				int rank = card.getRank();
+				
+				// Update straight draw if this is the first card in col or it contributes to the straight
+				if (straightDraw == 0 || (rank >= lowRank && rank <= highRank && !usedRanks.contains(rank))) {
+					straightDraw += 1;
+					
+					// Update max and min ranks in straight draw, if needed
+					if (rank > maxRank) {
+						maxRank = rank;
+					}
+					
+					if (rank < minRank) {
+						minRank = rank;
+					}
+					
+					// Calculate new bounds for straight
+					lowRank = minRank - (SIZE - (maxRank - minRank + 1));
+					highRank = maxRank + (SIZE - (maxRank - minRank + 1));
+				}
+				
+				// If straight draw is missed, break immediately
+				else {
+					break;
+				}
+			}
+		}
+		
+		// If we have more than one card in a straight, add appropriate
+		// fraction of full straight score
+		if (straightDraw > 1) {
+			score = straightScore * ((float)straightDraw / SIZE);
+		}
+		
+		// If we have one card of the same suit, set to half of appropriate
+		// fraction of full flush score. This is to encourage agent not to
+		// ruin flush draws and continually stack up same-suit cards on the
+		// same row
+		else if (straightDraw == 1) {
+			score = straightScore * ((float)straightDraw / SIZE / 2);
+		}
 		
 		return score;
 	}
@@ -356,7 +410,7 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 	}
 
 	/**
-	 * Demonstrate ExpectimaxPlayer play with Ameritish point system.
+	 * Demonstrate ExpectimaxPlayer play with British point system.
 	 * @param args (not used)
 	 */
 	public static void main(String[] args) {

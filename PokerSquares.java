@@ -311,10 +311,11 @@ public class PokerSquares {
 		// Demonstration of tournament evaluation  
 		System.out.println("\n\nTournament evaluation demo:");
 		ArrayList<PokerSquaresPlayer> players = new ArrayList<PokerSquaresPlayer>();
-		players.add(new RandomPlayer());
-		players.add(new GreedyMCPlayer(0));
-		players.add(new GreedyMCPlayer(2));
-		players.add(new ExpectimaxPlayer(0));
+//		players.add(new RandomPlayer());
+//		players.add(new GreedyMCPlayer(0));
+//		players.add(new GreedyMCPlayer(2));
+		players.add(new ExpectimaxPlayer(1000000));
+		players.add(new ExpectimaxPlayer(30000000));
 		ArrayList<PokerSquaresPointSystem> systems = new ArrayList<PokerSquaresPointSystem>();
 		PokerSquaresPointSystem.setSeed(0L);
 		systems.add(PokerSquaresPointSystem.getBritishPointSystem());
