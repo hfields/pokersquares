@@ -176,183 +176,6 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 		return playPos; // return the chosen play
 	}
 	
-	/**
-	 * Returns a heuristic evaluation of the given game state
-	 */
-	private double heuristic() {
-		double eval = 0;
-		
-		int[] handScores = system.getHandScores(grid);
-		
-		for (int i = 0; i < 2 * SIZE; i++) {
-			int handScore = handScores[i];
-			
-			// If a hand is already made, it contributes its score to the heuristic val
-			if (handScore > 0) {
-				eval += handScores[i];
-			}
-			
-			// Otherwise, evaluate potential "goodness" of yet to be made hands
-			else {
-				// Check rows
-				if (i < 5) {	
-					eval += rowEval(i);
-				}
-				
-				// Check columns
-				else {
-					eval += colEval(i-5);
-				}
-			}
-		}
-		
-		return eval;
-	}
-	
-	private double rowEval(int row) {
-		int[] scores = system.getScoreTable();
-		int flushScore = scores[PokerHand.FLUSH.id];
-		
-		// Initialize variables to check for flush draws
-		int currentSuit = -1; //-1 indicates no suit set yet
-		int suitCount = 0;
-		double score = 0;
-		
-		for (int col = 0; col < SIZE; col++) {
-			Card card = grid[row][col];
-			
-			// If card position isn't empty
-			if (card != null) {
-				// Update flush draw if this is the first card in row or it matches the last card's suit
-				if (card.getSuit() == currentSuit || currentSuit == -1) {
-					suitCount += 1;
-					currentSuit = card.getSuit();
-				}
-				
-				// If suit does not match, flush draw is no longer possible
-				else {
-					suitCount = 0;
-					break;
-				}
-			}
-		}
-		
-		// If we have more than one card of the same suit, add appropriate
-		// fraction of full flush score
-		if (suitCount > 1) {
-			score = flushScore * ((float)suitCount / SIZE);
-		}
-		
-		// If we have one card of the same suit, set to half of appropriate
-		// fraction of full flush score. This is to encourage agent not to
-		// ruin flush draws and continually stack up same-suit cards on the
-		// same row
-		else if (suitCount == 1) {
-			score = flushScore * ((float)suitCount / SIZE / 2);
-		}
-		
-		return score;
-	}
-	
-	private double colEval(int col) {
-		int[] scores = system.getScoreTable();
-		int straightScore = scores[PokerHand.STRAIGHT.id];
-		
-		// Initialize variables to check for straight draws
-		int cardCount = 0;
-		int straightDraw = 0;
-		int maxRank = -1;
-		int minRank = 13;
-		int lowRank = 0;
-		int highRank = 12;
-		ArrayList<Integer> usedRanks = new ArrayList<Integer>();
-		double score = 0;
-		
-		for (int row = 0; row < SIZE; row++) {
-			Card card = grid[row][col];
-			
-			// If card position isn't empty
-			if (card != null) {
-				int rank = card.getRank();
-				
-				// If there is only an ace in the straight draw, allow it to count as
-				// high or low, depending on the new card
-				if (maxRank == 0 && minRank == 0) {
-					// If card is 10 or higher, count ace as high
-					if (rank >= 9) {
-						maxRank = 13;
-						minRank = 13;
-					}
-					
-					// If card is 5 or lower, count ace as low
-					else if (rank <= 5) {
-						maxRank = 0;
-						minRank = 0;
-					}
-					
-					// Otherwise, straight draw is missed
-					else {
-						straightDraw = 0;
-						break;
-					}
-				}
-				
-				// If there is at least a 10 in the straight draw, treat ace as high
-				if (maxRank >= 9 && rank == 0) {
-					rank = 13;
-				}
-				
-				// Update straight draw if this is the first card in col or it contributes to the straight
-				if (straightDraw == 0 || (rank >= lowRank && rank <= highRank && !usedRanks.contains(rank))) {
-					straightDraw += 1;
-					
-					// Update max and min ranks in straight draw, if needed
-					if (rank > maxRank) {
-						maxRank = rank;
-					}
-					
-					if (rank < minRank) {
-						minRank = rank;
-					}
-					
-					// Calculate new bounds for straight
-					lowRank = minRank - (SIZE - 1 - (maxRank - minRank));
-					highRank = maxRank + (SIZE - 1 - (maxRank - minRank));
-					
-					// Ensure that bounds do not exceed limits
-					if (lowRank < 0) {
-						lowRank = 0;
-					}
-					
-					if (highRank > 13) {
-						highRank = 13;
-					}
-				}
-				
-				// If straight draw is missed, break immediately
-				else {
-					straightDraw = 0;
-					break;
-				}
-			}
-		}
-		
-		// If we have more than one card in a straight, add appropriate
-		// fraction of full straight score
-		if (straightDraw > 1) {
-			score = straightScore * ((float)straightDraw / SIZE);
-		}
-		
-		// If we have one card of the same suit, set to half of appropriate
-		// fraction of full flush score. This is to encourage agent not to
-		// ruin flush draws and continually stack up same-suit cards on the
-		// same row
-		else if (straightDraw == 1) {
-			score = straightScore * ((float)straightDraw / SIZE / 2);
-		}
-		
-		return score;
-	}
 	
 	/**
 	 * Calculates the expectimax value of a given placement of a card on the grid. 
@@ -420,6 +243,235 @@ public class ExpectimaxPlayer implements PokerSquaresPlayer {
 			undoPlay();
 			return expectimax;
 		}
+	}
+	
+	/**
+	 * Returns a heuristic evaluation of the given game state
+	 */
+	private double heuristic() {
+		double eval = 0;
+		
+		int[] handScores = system.getHandScores(grid);
+		
+		for (int i = 0; i < 2 * SIZE; i++) {
+			int handScore = handScores[i];
+			
+			// If a hand is already made, it contributes its score to the heuristic val
+			if (handScore > 0) {
+				eval += handScores[i];
+			}
+			
+			// Otherwise, evaluate potential "goodness" of yet to be made hands
+			else {
+				// Check rows
+				if (i < 5) {	
+					//eval += 0;
+					eval += rowEval(i);
+				}
+				
+				// Check columns
+				else {
+					eval += colEval(i-5);
+				}
+			}
+		}
+		
+		return eval;
+	}
+	
+	/**
+	 * Calculates the score that a given row will contribute to the heuristic value. 
+	 * @param row the row being evaluated
+	 */
+	private double rowEval(int row) {
+		double score = 0;
+		
+		// Add cards in the row to ArrayList of cards
+		ArrayList<Card> cards = new ArrayList<Card>();
+		
+		for (int col = 0; col < SIZE; col++) {
+			Card card = grid[row][col];
+			
+			if (card != null) {
+				cards.add(grid[row][col]);
+			}
+		}
+		
+		// Calculate straight draw potential
+		//score = getFlushDrawScore(cards);
+		
+		return score;
+	}
+	
+	/**
+	 * Calculates the score that a given column will contribute to the heuristic value. 
+	 * @param col the column being evaluated
+	 */
+	private double colEval(int col) {
+		double score = 0;
+		
+		// Add cards in the column to ArrayList of cards
+		ArrayList<Card> cards = new ArrayList<Card>();
+		
+		for (int row = 0; row < SIZE; row++) {
+			Card card = grid[row][col];
+			
+			if (card != null) {
+				cards.add(grid[row][col]);
+			}
+		}
+		
+		// Calculate straight draw potential
+		score += getStraightDrawScore(cards);
+		
+		return score;
+	}
+	
+	/**
+	 * Evaluates the flush draw potential of a given ArrayList of Cards.
+	 * Every card that contributes to the flush draw adds 1 to the final
+	 * result. A missed flush draw (cards of two different suits) returns 0. 
+	 * @param cards the cards to evaluate the flush draw potential of
+	 */
+	private double getFlushDrawScore(ArrayList<Card> cards) {
+		int[] scores = system.getScoreTable();
+		int flushScore = scores[PokerHand.FLUSH.id];
+		
+		// Initialize variables to check for flush draws
+		int currentSuit = -1; //-1 indicates no suit set yet
+		int suitCount = 0;
+		double score = 0;
+		
+		for (Card card : cards) {
+			// Update flush draw if this is the first card in row or it matches the last card's suit
+			if (card.getSuit() == currentSuit || currentSuit == -1) {
+				suitCount += 1;
+				currentSuit = card.getSuit();
+			}
+			
+			// If suit does not match, flush draw is no longer possible
+			else {
+				suitCount = 0;
+				break;
+			}
+		}
+		
+		// If we have more than one card of the same suit, add appropriate
+		// fraction of full flush score
+		if (suitCount > 1) {
+			score = flushScore * ((float)suitCount / SIZE);
+		}
+		
+		// If we have one card of the same suit, set to half of appropriate
+		// fraction of full flush score. This is to encourage agent not to
+		// ruin flush draws and continually stack up same-suit cards on the
+		// same row
+		else if (suitCount == 1) {
+			score = flushScore * ((float)suitCount / SIZE / 2);
+		}
+		
+		return score;
+	}
+	
+	/**
+	 * Evaluates the straight draw potential of a given ArrayList of Cards.
+	 * Every card that contributes to the straight draw adds to the final result. 
+	 * A missed straight draw (cards of two different suits) returns 0. 
+	 * @param cards the cards to evaluate the flush draw potential of
+	 */
+	private double getStraightDrawScore(ArrayList<Card> cards) {
+		int[] scores = system.getScoreTable();
+		int straightScore = scores[PokerHand.STRAIGHT.id];
+		
+		// Initialize variables to check for straight draws
+		int cardCount = 0;
+		int straightDraw = 0;
+		int maxRank = -1;
+		int minRank = 13;
+		int lowRank = 0;
+		int highRank = 12;
+		ArrayList<Integer> usedRanks = new ArrayList<Integer>();
+		double score = 0;
+		
+		for (Card card : cards) {
+			int rank = card.getRank();
+			
+			// If there is only an ace in the straight draw, allow it to count as
+			// high or low, depending on the new card
+			if (maxRank == 0 && minRank == 0) {
+				// If card is 10 or higher, count ace as high
+				if (rank >= 9) {
+					maxRank = 13;
+					minRank = 13;
+				}
+				
+				// If card is 5 or lower, count ace as low
+				else if (rank <= 5) {
+					maxRank = 0;
+					minRank = 0;
+				}
+				
+				// Otherwise, straight draw is missed
+				else {
+					straightDraw = 0;
+					break;
+				}
+			}
+			
+			// If there is at least a 10 in the straight draw, treat ace as high
+			if (maxRank >= 9 && rank == 0) {
+				rank = 13;
+			}
+			
+			// Update straight draw if this is the first card in col or it contributes to the straight
+			if (straightDraw == 0 || (rank >= lowRank && rank <= highRank && !usedRanks.contains(rank))) {
+				straightDraw += 1;
+				
+				// Update max and min ranks in straight draw, if needed
+				if (rank > maxRank) {
+					maxRank = rank;
+				}
+				
+				if (rank < minRank) {
+					minRank = rank;
+				}
+				
+				// Calculate new bounds for straight
+				lowRank = minRank - (SIZE - 1 - (maxRank - minRank));
+				highRank = maxRank + (SIZE - 1 - (maxRank - minRank));
+				
+				// Ensure that bounds do not exceed limits
+				if (lowRank < 0) {
+					lowRank = 0;
+				}
+				
+				if (highRank > 13) {
+					highRank = 13;
+				}
+			}
+			
+			// If straight draw is missed, break immediately
+			else {
+				straightDraw = 0;
+				break;
+			}
+		}
+		
+		// If we have more than one card in a straight, add appropriate
+		// fraction of full straight score
+		if (straightDraw > 1) {
+			score = straightScore * ((float)straightDraw / SIZE);
+		}
+		
+		// If we have one card of the same suit, set to half of appropriate
+		// fraction of full straight score. This is to encourage agent not to
+		// ruin straight draws and continually stack up same-suit cards on the
+		// same row
+		else if (straightDraw == 1) {
+			score = straightScore * ((float)straightDraw / SIZE / 2);
+		}
+		
+		return score;
 	}
 	
 	public void makePlay(Card card, int row, int col) {
