@@ -259,11 +259,14 @@ public class PokerSquares {
 			System.out.println("Point System:\n" + system);
 			int[] totalScores = new int[players.size()];
 			for (int i = 0; i < players.size(); i++) { // for each player
+				long startTime = System.nanoTime();
 				PokerSquaresPlayer player = players.get(i);
 				System.out.printf("Player: \"%s\"\n", player.getName());
 				int[] scores = new PokerSquares(player, system).playSequence(gamesPerSystem, startSeed, false);
 				for (int score : scores)
 					totalScores[i] += score;
+				long endTime = System.nanoTime();
+				System.out.println("Took "+((endTime - startTime)/1000) + " ms"); 
 				System.out.printf("Player \"%s\" Average Score: %d\n", player.getName(), totalScores[i]/gamesPerSystem);
 			}
 			int maxTotal = Integer.MIN_VALUE;
@@ -311,7 +314,7 @@ public class PokerSquares {
 		// Demonstration of tournament evaluation  
 		System.out.println("\n\nTournament evaluation demo:");
 		ArrayList<PokerSquaresPlayer> players = new ArrayList<PokerSquaresPlayer>();
-//		players.add(new RandomPlayer());
+		players.add(new RandomPlayer());
 //		players.add(new GreedyMCPlayer(0));
 //		players.add(new GreedyMCPlayer(2));
 		players.add(new ExpectimaxPlayer(1000000, false));
